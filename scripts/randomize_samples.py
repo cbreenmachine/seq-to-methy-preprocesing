@@ -4,12 +4,12 @@ import os
 import random
 
 # Training and testing scheme
-train_test_dict = {
-    "group": ["train", "test"]*10 + ["valid"]*2,
-    "chrom": ["chr" + str(x) for x in range(1, 23)]
-}
+# train_test_dict = {
+#     "group": ["train", "test"]*10 + ["valid"]*2,
+#     "chrom": ["chr" + str(x) for x in range(1, 23)]
+# }
 
-train_test_df = pd.DataFrame(train_test_dict)
+# train_test_df = pd.DataFrame(train_test_dict)
 
 def main(args):
 
@@ -37,9 +37,10 @@ def main(args):
 
     # Create sample, group (100, 'train')
     sample_df = pd.DataFrame({'sample': samples[0:N], 'group': group})
+    sample_df.to_csv(args.ofile, index = False)
     
-    out_df = sample_df.merge(train_test_df, how= "outer", on="group")
-    out_df.to_csv(args.ofile, index = False)
+    # out_df = sample_df.merge(train_test_df, how= "outer", on="group")
+    # out_df.to_csv(args.ofile, index = False)
     
 if __name__ == "__main__":
 

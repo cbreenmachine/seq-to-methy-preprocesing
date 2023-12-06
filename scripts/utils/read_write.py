@@ -2,6 +2,40 @@ import numpy as np
 import pandas as pd
 from Bio import SeqIO
 
+chroms_by_method = {
+    'train': ['chr' + str(x) for x in range(1, 20, 2)],
+    'test': ['chr' + str(x) for x in range(2, 21, 2)],
+    'valid': ['chr21', 'chr22']
+}
+
+def get_encoding_file_names(rando_file_path, extension, group, odir = "dataDerived"):
+    df = pd.read_csv(rando_file_path)
+
+    out = []
+    for _, row in df.iterrows():
+        g, s = row['group'], row['sample']
+
+        if g == group:
+            for c in chroms_by_method[g]:
+                out.append(f"{odir}/{g}/{s}.{c}.{extension}.pt")
+        
+    return(out)
+
+
+def get_encoding_file_prefix(rando_file_path, extension, group, odir = "dataDerived"):
+    df = pd.read_csv(rando_file_path)
+
+    out = []
+    for _, row in df.iterrows():
+        g, s = row['group'], row['sample']
+
+        if g == group:
+            for c in chroms_by_method[g]:
+                out.append(f"{odir}/{g}/{s}.{c}.{extension}.pt")
+        
+    return(out)
+
+
 def infer_sample(x):
     '''Return the sample we're operating on'''
     return(x.split("/")[-1].split(".")[0])
@@ -52,7 +86,7 @@ def load_vcf(ifile, chrom):
     # pos (1-based) as index
     # reference, alternate, variant_call
 
-    return df
+    return df.to_dict()
 
 def load_bed(ifile, chrom, min_coverage = 10):
     '''
