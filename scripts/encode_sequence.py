@@ -4,8 +4,10 @@ from Bio import SeqIO
 import argparse
 import torch
 
-from encoder import OneHotEncoder, VariantEncoder, BivariantEncoder, AdditiveEncoder
-from encoder import infer_chrom, infer_sample, load_vcf, load_bed, load_fa
+from vencoder.onehot import OneHotEncoder, 
+from vencoder.variant import VariantEncoder
+
+from utils.read_write import infer_chrom, infer_sample, load_vcf, load_bed, load_fa
 
 # Changes
 # 1. Read assignment from randomization.csv and write to train/, valid/, or test/
@@ -18,7 +20,7 @@ def main(args):
     sample = infer_sample(args.ofile_prefix)
         
     # Read in data
-    ref_seq = load_fa(f"{args.ref_dir}/{chrom}.fa", chrom)
+    reference_sequence = load_fa(f"{args.ref_dir}/{chrom}.fa", chrom)
     snp_df = load_vcf(f"{args.snp_dir}/{sample}.pass.vcf", chrom)
     methy_df = load_bed(f"{args.methy_dir}/{sample}.bed", chrom)
 
