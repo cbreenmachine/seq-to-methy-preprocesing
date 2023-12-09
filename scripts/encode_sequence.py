@@ -7,7 +7,7 @@ import torch
 from vencoder.onehot import OneHotEncoder
 from vencoder.variant import VariantEncoder
 
-from utils.read_write import load_vcf, load_bed, load_fa, get_encoding_file_names, chroms_by_method
+from utils.read_write import load_vcf, load_fa, get_encoding_file_names, chroms_by_group
 
 def encoder_factory(method):
     if method == "variant":
@@ -28,7 +28,7 @@ def main(args):
     
     odir = f"{args.odir}/{args.group}/"
 
-    for chrom in chroms_by_method[group]:
+    for chrom in chroms_by_group[group]:
         # Derived some values
         ofile = f"{odir}/{sample}.{chrom}.{method}.pt"
         print(f"Will output {ofile}")
@@ -44,15 +44,6 @@ def main(args):
 
         output_tensor = torch.tensor(my_encoder.encoding, dtype = torch.uint8)    
         torch.save(output_tensor, ofile)
-
-    # Keep track of positions, methylated counts, total counts as well
-    # This file will be relatively small
-
-    # response_output_file = f"{args.ofile_prefix}.responses.pkl"
-    # if not os.file.exists(response_output_file):
-    #     methy_df = load_bed(f"{args.methy_dir}/{sample}.bed", chrom)
-    #     methy_df.to_pickle(response_output_file)
-    
 
 
 if __name__ == "__main__":

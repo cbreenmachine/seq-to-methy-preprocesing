@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from Bio import SeqIO
 
-chroms_by_method = {
+chroms_by_group = {
     'train': ['chr' + str(x) for x in range(1, 20, 2)],
     'test': ['chr' + str(x) for x in range(2, 21, 2)],
     'valid': ['chr21', 'chr22']
@@ -88,15 +88,13 @@ def load_vcf(ifile, chrom):
 
     return df.to_dict()
 
-def load_bed(ifile, chrom, min_coverage = 10):
+def load_methylation_bed(ifile, min_coverage = 10):
     '''
     
     '''
     full_df = pd.read_table(ifile)
 
-    # Need the data frame to be just the one chromosome and pass minimum coverage threshold
-    keepix = ((full_df['chrom'] == chrom) & 
-              (full_df['coverage'] >= min_coverage) &
+    keepix = ((full_df['coverage'] >= min_coverage) &
               (full_df['methylated'] <= full_df['coverage']))
     
     sub_df = full_df.loc[keepix].copy(deep=True)
@@ -105,5 +103,5 @@ def load_bed(ifile, chrom, min_coverage = 10):
     sub_df['pos'] = sub_df.chromStart + 1
     sub_df.set_index('pos', inplace = True)
     
-    return(sub_df[['methylated', 'coverage', 'strand']])
+    return(sub_df[['chrom', 'methylated', 'coverage', 'strand']])
 
