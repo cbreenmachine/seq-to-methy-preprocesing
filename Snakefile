@@ -1,9 +1,10 @@
 from snakemake.remote.FTP import RemoteProvider as FTPRemoteProvider
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
 import pandas as pd
-from scripts.utils.read_write import get_encoding_file_names, chroms_by_group
+from scripts.utils.constants import chroms_by_group
+
 from itertools import product
 import glob
-
 
 
 email_address = "cebreen@wisc.edu"
@@ -18,6 +19,8 @@ ref_genome_url = "ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405
 db_snp_url = "https://ftp.ncbi.nih.gov/snp/organisms/human_9606_b151_GRCh38p7/VCF/common_all_20180418.vcf.gz"
 
 FTP = FTPRemoteProvider()
+HTTP = HTTPRemoteProvider()
+
 chrom_range = ["chr" + str(x) for x in range(1, 23)]
 
 ###########################################################################
@@ -26,6 +29,8 @@ chrom_range = ["chr" + str(x) for x in range(1, 23)]
 
 df = pd.read_csv("dataDerived/randomization.csv")
 samples_by_group = df.groupby('group')['sample'].apply(list).to_dict()
+
+sample_range = df['sample'].tolist()
 
 
 def get_ofiles_list_by_method(method, group, odir="dataDerived/"):
@@ -57,11 +62,9 @@ def make_encoding_input_names(wildcards):
 
 rule all:
     input: 
-        make_encoding_input_names,
-        expand("{x}.gz.index", x = glob.glob("dataRaw/variant-calls/*vcf")),
-        "dataRaw/dbSNP/common_all_20180418.renamed.vcf.gz.index"
-        
-
+        get_ofiles_list_by_method('reference', 'valid'),
+        expand("dataDerived/variantComparisons/{sample}.out", sample = sample_range)
+       
 
 
 ###########################################################################
@@ -70,34 +73,51 @@ rule all:
 
 
 rule download_common_snps:
-    input:
-        chr_map = "dataRaw/dbSNP/N_to_chrN.txt"
-    params:
-        url = db_snp_url
-    output:
-        snp_file = "common_all_20180418.vcf.gz",
-        snp_renamed_file = "dataRaw/dbSNP/common_all_20180418.renamed.vcf.gz",
-        snp_index = "dataRaw/dbSNP/common_all_20180418.renamed.vcf.gz.index"
+    input: HTTP.remote(db_snp_url, keep_local = False)
+    output: "dataRaw/dbSNP/common_all_20180418.vcf.gz"
     conda: "envs/bcftools.yaml"
-    shell:
+    shell: 
         """
-        wget {params.url}
-        bcftools annotate \
-            --rename-chrs {input.chr_map} {output.snp_file} \
-            | bgzip > {output.snp_renamed_file}
-
-        bcftools index {output.snp_renamed_file}
+        mv {input} {output}
+        bcftools index {output}
         """
         
 
-rule compress_and_index_vcfs:
-    input: "dataRaw/variant-calls/{sample}.pass.vcf"
-    output: 
-        "dataRaw/variant-calls/{sample}.pass.vcf.gz",
-        "dataRaw/variant-calls/{sample}.pass.vcf.gz.index"
+rule process_common_snps:
+    input:
+        dbsnp_file = "dataRaw/dbSNP/common_all_20180418.vcf.gz",
+        chr_map = "dataRaw/dbSNP/N_to_chrN.txt"
+    output:
+        "dataRaw/dbSNP/common_all_20180418.renamed.vcf.gz",
+        "dataRaw/dbSNP/common_all_20180418.renamed.vcf.gz.csi"
     conda: "envs/bcftools.yaml"
-    shell: "gzip {input} && bcftools index {output[0]}"
+    shell:
+        """
+        bcftools annotate --rename-chrs {input.chr_map} {input.dbsnp_file} | bgzip > {output[0]}
+        bcftools index {output[0]}
+        """
 
+
+rule index_vcfs:
+    input: "dataRaw/variants/{sample}.pass.vcf.gz"
+    output: "dataRaw/variants/{sample}.pass.vcf.gz.csi"
+    conda: "envs/bcftools.yaml"
+    shell: "bcftools index -f {input} > {output}"
+
+
+rule compute_vcf_overlaps:
+    input: 
+        "dataRaw/variants/{sample}.pass.vcf.gz",
+        "dataRaw/variants/{sample}.pass.vcf.gz.csi",
+        "dataRaw/dbSNP/common_all_20180418.renamed.vcf.gz",
+        "dataRaw/dbSNP/common_all_20180418.renamed.vcf.gz.csi"
+    output:
+        "dataDerived/variantComparisons/{sample}.out"
+    conda: "envs/bcftools.yaml"
+    shell: 
+        """
+        bcftools stats {input[0]} {input[2]} > {output}
+        """
    
 ###########################################################################
 ############################## Workflow ###################################

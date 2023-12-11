@@ -1,6 +1,10 @@
 # seq-to-methy-preprocesing
-Running the scripts to encode variants, filter by coverage, and standardize covariates.
 
+We use two environments. The main environment is called `torch` and includes a pytorch installaction, numpy, pandas, and the custom python package [`vencoder`](github.com/cbreenmachine/vencoder). This workflow is always run assuming this environment is avtivated. The vast majority of the workflow depends only on the aforementioned packages. The parts that don't rely on bcftools, which is siloed in its own (lean) conda environment.
+
+```
+snakemake --use-conda --conda-create-envs-only
+```
 
 # Required Files
 
@@ -14,7 +18,7 @@ A reference genome and dbSNP data is downloaded automatically.
 
 # Setup
 
-Because snakemake needs to know the output files beforehand, and in this workflow the output files depend on randomization, we need to run the following 
+Because snakemake needs to know the output files beforehand, and in this workflow the output files depend on randomization, we need to run the following snippet before the workflow.
 
 ```
 python scripts/randomize_samples.py \
@@ -22,6 +26,12 @@ python scripts/randomize_samples.py \
         --n_valid 11 \
         --n_test 185 \
         --ofile "dataDerived/randomization.csv"
+```
+
+Thereafter, you should be able to run (assuming environments are setup correctly)
+
+```
+snakemake --use-conda -n -p --rerun-triggers mtime
 ```
 
 # Organization
