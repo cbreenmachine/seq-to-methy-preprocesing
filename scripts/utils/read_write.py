@@ -48,7 +48,7 @@ def load_fa(ifile, chrom):
 
 
 
-def load_vcf(ifile, chrom):
+def load_vcf(ifile):
     '''
     Reads and extracts relevant information from VCF file
 
@@ -64,6 +64,13 @@ def load_vcf(ifile, chrom):
                      usecols=[0, 1, 3, 4, 9],
                      names=['chrom', 'pos', 'reference', 'alternate', 'extra_info']
                      )
+
+    return(df)
+
+
+def subset_vcf(df, chrom):
+    
+    df = df.copy()
     
     # Filter to shrink the number of comparisons that need to be made
     df = df.loc[df['chrom'] == chrom]

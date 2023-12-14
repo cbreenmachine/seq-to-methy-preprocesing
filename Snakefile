@@ -22,6 +22,9 @@ FTP = FTPRemoteProvider()
 HTTP = HTTPRemoteProvider()
 
 chrom_range = ["chr" + str(x) for x in range(1, 23)]
+chrom_range_str = ",".join(chrom_range)
+
+encode_samples = ['ENCFF534YXW', 'ENCFF933OKK', 'ENCFF573LIB', 'ENCFF844RZP', 'ENCFF068PZH']
 
 ###########################################################################
 #################### Randomize to train and test ##########################
@@ -33,13 +36,13 @@ samples_by_group = df.groupby('group')['sample'].apply(list).to_dict()
 sample_range = df['sample'].tolist()
 
 
-def get_ofiles_list_by_method(method, group, odir="dataDerived/"):
+def get_ofiles_list_by_method(output_type, group, ext = "pt", odir="dataDerived/"):
     '''Handles the nested structure of the train/test samples'''
-    # method: variant, onehot
+    # method: variant, reference
     samples = samples_by_group[group]
     chroms = chroms_by_group[group]
 
-    files = [f"{s}.{c}.{method}.pt" for s,c in product(samples, chroms)]
+    files = [f"{s}.{c}.{output_type}.{ext}" for s,c in product(samples, chroms)]
     out = [os.path.join(odir, group, z) for z in files]
     return(out)
 
@@ -53,7 +56,7 @@ def get_ofiles_list_by_method(method, group, odir="dataDerived/"):
 def make_encoding_input_names(wildcards):
     out = []
 
-    for m in ['reference', 'variant']:
+    for m in ['reference', 'variant', 'mask']:
         for g in ['train', 'valid']:
             out += get_ofiles_list_by_method(m, g)
     return(out)
@@ -62,8 +65,17 @@ def make_encoding_input_names(wildcards):
 
 rule all:
     input: 
+        get_ofiles_list_by_method('response', 'train', 'pkl'),
+        get_ofiles_list_by_method('reference', 'train'),
+        get_ofiles_list_by_method('variant', 'train'),
+        get_ofiles_list_by_method('mask', 'train'),
+
+        get_ofiles_list_by_method('response', 'valid', 'pkl'),
         get_ofiles_list_by_method('reference', 'valid'),
-        expand("dataDerived/variantComparisons/{sample}.out", sample = sample_range)
+        get_ofiles_list_by_method('variant', 'valid'),
+        "dataDerived/vcf.stats.csv",
+        "dataDerived/vcf.stats.encode.csv",
+        "dataDerived/covariates.csv"
        
 
 
@@ -105,6 +117,21 @@ rule index_vcfs:
     shell: "bcftools index -f {input} > {output}"
 
 
+
+rule compress_and_index_encode_samples:
+    conda: "envs/bcftools.yaml"
+    input:
+        "dataRaw/ENCODE/{sample}.vcf.gz"
+    output:
+        "dataRaw/ENCODE/{sample}.bcf",
+        "dataRaw/ENCODE/{sample}.bcf.csi"
+    shell:
+        """
+        bcftools view -Ob -o {output[0]} {input[0]}
+        bcftools index {output[0]} 
+        """
+
+
 rule compute_vcf_overlaps:
     input: 
         "dataRaw/variants/{sample}.pass.vcf.gz",
@@ -113,11 +140,63 @@ rule compute_vcf_overlaps:
         "dataRaw/dbSNP/common_all_20180418.renamed.vcf.gz.csi"
     output:
         "dataDerived/variantComparisons/{sample}.out"
+    params:
+        chrom_range_str
     conda: "envs/bcftools.yaml"
     shell: 
         """
-        bcftools stats {input[0]} {input[2]} > {output}
+        bcftools stats --regions {params[0]} {input[0]} {input[2]} > {output}
         """
+
+rule compute_vcf_overlaps_encode:
+    input: 
+        "dataRaw/ENCODE/{sample}.bcf",
+        "dataRaw/ENCODE/{sample}.bcf.csi",
+        "dataRaw/dbSNP/common_all_20180418.renamed.vcf.gz",
+        "dataRaw/dbSNP/common_all_20180418.renamed.vcf.gz.csi"
+    output:
+        "dataDerived/variantComparisonsENCODE/{sample}.out"
+    params:
+        chrom_range_str
+    conda: "envs/bcftools.yaml"
+    shell: 
+        """
+        bcftools stats --regions {params[0]} {input[0]} {input[2]} > {output}
+        """
+
+
+
+rule combine_vcf_overlap_stats:
+    input: 
+        expand("dataDerived/variantComparisons/{sample}.out", sample = sample_range)
+    params: 
+        "dataDerived/variantComparisons/"
+    output:
+        "dataDerived/vcf.stats.csv"
+    shell:
+        """
+        python scripts/combine_snp_counts.py \
+            --idir {params[0]} \
+            --ofile {output}
+        """
+
+
+
+rule combine_vcf_overlap_stats_encode:
+    input: 
+        expand("dataDerived/variantComparisonsENCODE/{sample}.out", sample = encode_samples)
+    params: 
+        "dataDerived/variantComparisonsENCODE/"
+    output:
+        "dataDerived/vcf.stats.encode.csv"
+    shell:
+        """
+        python scripts/combine_snp_counts.py \
+            --idir {params[0]} \
+            --ofile {output}
+        """
+    
+    
    
 ###########################################################################
 ############################## Workflow ###################################
@@ -181,6 +260,29 @@ rule encode_valid_samples:
             --sample {wildcards.sample} \
             --group valid \
             --method {wildcards.method}
+        """
+
+
+rule format_train_responses:
+    output: 
+        expand("dataDerived/train/{{sample}}.{chr}.response.pkl",
+                chr = chroms_by_group['train'])
+    shell:
+        """
+        python scripts/format_responses.py \
+            --sample {wildcards.sample} \
+            --group train
+        """
+
+rule format_valid_responses:
+    output: 
+        expand("dataDerived/valid/{{sample}}.{chr}.response.pkl",
+                chr = chroms_by_group['valid'])
+    shell:
+        """
+        python scripts/format_responses.py \
+            --sample {wildcards.sample} \
+            --group valid
         """
 
 ###########################################################################
