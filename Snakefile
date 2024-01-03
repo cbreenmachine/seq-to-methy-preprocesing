@@ -69,10 +69,18 @@ rule all:
         get_ofiles_list_by_method('reference', 'train'),
         get_ofiles_list_by_method('variant', 'train'),
         get_ofiles_list_by_method('mask', 'train'),
+        get_ofiles_list_by_method('mask', 'train'),
 
         get_ofiles_list_by_method('response', 'valid', 'pkl'),
         get_ofiles_list_by_method('reference', 'valid'),
         get_ofiles_list_by_method('variant', 'valid'),
+        get_ofiles_list_by_method('mask', 'valid'),
+
+        get_ofiles_list_by_method('response', 'test', 'pkl'),
+        get_ofiles_list_by_method('reference', 'test'),
+        get_ofiles_list_by_method('variant', 'test'),
+        get_ofiles_list_by_method('mask', 'test'),
+
         "dataDerived/vcf.stats.csv",
         "dataDerived/vcf.stats.encode.csv",
         "dataDerived/covariates.csv"
@@ -262,6 +270,19 @@ rule encode_valid_samples:
             --method {wildcards.method}
         """
 
+rule encode_test_samples:
+    priority: 10
+    output: 
+        expand("dataDerived/test/{{sample}}.{chr}.{{method}}.pt", 
+                chr = chroms_by_group['test'])
+    shell:
+        """
+        python scripts/encode_sequence.py \
+            --sample {wildcards.sample} \
+            --group test \
+            --method {wildcards.method}
+        """
+
 
 rule format_train_responses:
     output: 
@@ -283,6 +304,17 @@ rule format_valid_responses:
         python scripts/format_responses.py \
             --sample {wildcards.sample} \
             --group valid
+        """
+
+rule format_test_responses:
+    output: 
+        expand("dataDerived/test/{{sample}}.{chr}.response.pkl",
+                chr = chroms_by_group['test'])
+    shell:
+        """
+        python scripts/format_responses.py \
+            --sample {wildcards.sample} \
+            --group test
         """
 
 ###########################################################################

@@ -80,16 +80,11 @@ def subset_vcf(df, chrom):
 
     # Get rid of Ns, indicate that ref homozygous
     df = df[df['reference'].isin(['A', 'C', 'G', 'T'])]
-
-    # Makes iteration work
-    df = df.drop(columns=['chrom', 'extra_info'])
+    
+    df['data'] = df[['reference', 'alternate', 'variant_call']].apply(tuple, axis=1)
     df = df.set_index("pos")
-
-    # Output is
-    # pos (1-based) as index
-    # reference, alternate, variant_call
-
-    return df.to_dict()
+    
+    return df['data'].to_dict()
 
 def load_methylation_bed(ifile, min_coverage = 10):
     '''
