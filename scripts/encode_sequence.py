@@ -51,11 +51,15 @@ def main(args):
 
         # Use the factory method to refactor
         encoder_instance = encoder_factory(method)
-        breakpoint()
         my_encoder = encoder_instance(ref_sequence, calls_by_chrom)
         my_encoder.encode_data()
 
-        output_tensor = torch.tensor(my_encoder.encoding, dtype = torch.uint8)    
+        # Storage saving
+        if method == "variant":
+            output_tensor = torch.tensor(my_encoder.encoding, dtype = torch.float)    
+        else:
+            output_tensor = torch.tensor(my_encoder.encoding, dtype = torch.uint8)
+        
         torch.save(output_tensor, ofile)
 
 
