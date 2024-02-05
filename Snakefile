@@ -14,10 +14,7 @@ email_address = "cebreen@wisc.edu"
 
 all_chroms = ["chr" + str(x) for x in range(1, 23)]
 all_chroms_str = ",".join(all_chroms)
-
 encode_samples = ['ENCFF534YXW', 'ENCFF933OKK', 'ENCFF573LIB', 'ENCFF844RZP', 'ENCFF068PZH']
-
-
 
 
 ###########################################################################
@@ -79,7 +76,7 @@ rule all:
         "dataDerived/vcf.stats.csv",
         "dataDerived/vcf.stats.encode.csv",
         "dataDerived/covariates.csv",
-        expand("dataDerived/statsForCpGs/{chr}.stats.csv", chr = train_chroms)
+        expand("dataDerived/statsForCpGs/{chr}.stats.csv", chr = all_chroms)
         
 
 

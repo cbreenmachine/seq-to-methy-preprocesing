@@ -8,11 +8,9 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--', 
-                        default = "data/meQTL/humanmethylation450_15017482_v1-2.csv",
-                        help = "Manifest file provided by Illumina")
-    parser.add_argument('--meqtl', default = "data/meQTL/assoc_meta_all.csv")
-    parser.add_argument('--ofile', default = "data/meQTL/meQTL-variants.csv")
+    parser.add_argument('--idir', default = "dataDerived/statsForCpGs/", help = "directory with files like chr17.stat.csv")
+    parser.add_argument('--percent_nonmissing', default = 0.5)
+    parser.add_argument('--min_iqr', default = 0.05)
 
     args = parser.parse_args()
 

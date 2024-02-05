@@ -1,5 +1,8 @@
-# compute_cpg_summaty_stats
-# For
+# compute_cpg_summaty_stats.py
+# For each chromosome, compute the summary statistics
+# These stats will only be computed on the files found in the train/valid/test dirs
+# In other words, IQR represents IQR for the 185 train samples (NOT all 381 samples)
+
 import os
 import argparse
 import pickle
